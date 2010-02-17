@@ -1,0 +1,3 @@
+name = Own that page
+description = Provides an administration page for owning/changing permission check for certain paths.
+core = 6.x

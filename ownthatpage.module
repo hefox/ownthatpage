@@ -1,0 +1,42 @@
+<?php
+
+function ownthatpage_menu() {
+  $items['admin/settings/loginlogout'] = array(
+    'title' => 'Own that page settings',
+    'description' => 'Configure what pages to own and how settings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ownthatpage_settings'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'ownthatpage.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+
+function ownthatpage_menu_alter(&$items) {
+  $paths_var = variable_get('ownthatpage', "node,administer nodes\nnode/add,administer nodes");
+  $paths = explode("\n",$paths_var);
+  $perms = module_invoke_all('perm');
+  foreach ($paths as $path) {
+    $perm = '';
+    list($path, $perm) = explode(",",$path);
+    $path = trim($path);
+    $perm = trim($perm);
+    if (empty($path) || empty($items[$path])) {
+      $error = 1;
+      continue;
+    }
+    if ($perm && in_array($perm,$perms)) {
+      unset($items[$path]['access callback']);
+      $items[$path]['access arguments'] = array($perm);
+    } elseif(empty($perm)) {
+      unset($items[$path]);
+    } else {
+      $error = 1;
+    }
+  }
+  if ($error && user_access('administer site configuration')) {
+    drupal_set_message(t("There was error owning some paths, please check that paths and permissions exist for those configured under own that page settings"));
+  }
+}
