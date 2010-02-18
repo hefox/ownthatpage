@@ -1,11 +1,18 @@
 <?php
 
+/**
+ * Implementation of hook_install().
+ */
 function ownthatpage_install() {
   // run after most things 
   db_query("UPDATE {system} set weight=100 where name='ownthatpage'");
 }
 
-
+/**
+ * Implementation of hook_uninstall().
+ */
+ 
 function ownthatpage_uninstall() {
   variable_delete('ownthatpage');
+  variable_delete('ownthatpage_perm');
 }

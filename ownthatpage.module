@@ -1,7 +1,11 @@
 <?php
 
+/**
+ * Implementation of hook_menu().
+ */
+ 
 function ownthatpage_menu() {
-  $items['admin/settings/loginlogout'] = array(
+  $items['admin/settings/ownthatpage'] = array(
     'title' => 'Own that page settings',
     'description' => 'Configure what pages to own and how settings.',
     'page callback' => 'drupal_get_form',
@@ -13,11 +17,32 @@ function ownthatpage_menu() {
   return $items;
 }
 
+/**
+ * Implementation of hook_perm().
+ */
+function ownthatpage_perm() {
+  $perms =  explode("\n", variable_get('ownthatpage_perm', ""));
+  if ($perms) {
+    array_walk($perms,'ownthatpagecleaner');
+    return array_filter($perms);
+  }
+  
+}
+function ownthatpagecleaner(&$value) {
+    $value = check_plain(trim($value));   
+}
 
+
+/**
+ * Implementation of hook_menu_alter().
+ */
 function ownthatpage_menu_alter(&$items) {
   $paths_var = variable_get('ownthatpage', "node,administer nodes\nnode/add,administer nodes");
   $paths = explode("\n",$paths_var);
   $perms = module_invoke_all('perm');
+  $errors['path'] = array();
+  $errors['perm'] = array();
+  // go through each path/perm.  
   foreach ($paths as $path) {
     $perm = '';
     list($path, $perm) = explode(",",$path);
@@ -25,6 +50,7 @@ function ownthatpage_menu_alter(&$items) {
     $perm = trim($perm);
     if (empty($path) || empty($items[$path])) {
       $error = 1;
+      if ($path) $errors['path'][] = $path;
       continue;
     }
     if ($perm && in_array($perm,$perms)) {
@@ -34,9 +60,19 @@ function ownthatpage_menu_alter(&$items) {
       unset($items[$path]);
     } else {
       $error = 1;
+      $errors['perm'][] = $perm;
     }
   }
+  // if there was an error, tell the person changing the settings that they need to fix it. 
   if ($error && user_access('administer site configuration')) {
-    drupal_set_message(t("There was error owning some paths, please check that paths and permissions exist for those configured under own that page settings"));
+    if ($errors['path']) {
+       drupal_set_message(format_plural(count($errors['path']),"Path %path not found",
+        "Paths %path not found",array('%path'=>implode(", ",$errors['path']))),'error');  
+    }
+    if ($errors['perm']) {
+       drupal_set_message(format_plural(count($errors['perm']),"Permission %perm not found",
+        "Permissions %perm not found",array('%perm'=>implode(", ",$errors['perm']))),'error');  
+    }
+    drupal_set_message(t("There was error owning some paths, please check that paths and permissions exist for those configured under own that page settings"),'error');
   }
 }
