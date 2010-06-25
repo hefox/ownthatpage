@@ -39,40 +39,29 @@ function ownthatpagecleaner(&$value) {
 function ownthatpage_menu_alter(&$items) {
   $paths_var = variable_get('ownthatpage', "node,administer nodes\nnode/add,administer nodes");
   $paths = explode("\n",$paths_var);
-  $perms = module_invoke_all('perm');
-  $errors['path'] = array();
-  $errors['perm'] = array();
-  // go through each path/perm.  
+  $processed = array(); 
+  // go through each menu item
   foreach ($paths as $path) {
     $perm = '';
     list($path, $perm) = explode(",",$path);
     $path = trim($path);
     $perm = trim($perm);
-    if (empty($path) || empty($items[$path])) {
-      $error = 1;
-      if ($path) $errors['path'][] = $path;
-      continue;
-    }
-    if ($perm && in_array($perm,$perms)) {
-      unset($items[$path]['access callback']);
-      $items[$path]['access arguments'] = array($perm);
-    } elseif(empty($perm)) {
-      unset($items[$path]);
-    } else {
-      $error = 1;
-      $errors['perm'][] = $perm;
+    if (!empty($path)) {
+      $processed[$path] = $perm; 
     }
   }
-  // if there was an error, tell the person changing the settings that they need to fix it. 
-  if ($error && user_access('administer site configuration')) {
-    if ($errors['path']) {
-       drupal_set_message(format_plural(count($errors['path']),"Path %path not found",
-        "Paths %path not found",array('%path'=>implode(", ",$errors['path']))),'error');  
+  
+  foreach($items as $path => $info) {
+    foreach($processed as $test => $perm) {
+      if (drupal_match_path($path, $test)) {
+        if (!empty($perm) && $perm != 'do not own that page') {
+          unset($items[$path]['access callback']);
+          $items[$path]['access arguments'] = array($perm);
+        } elseif(empty($perm)) {
+          unset($items[$path]);
+        }
+        break;
+      }
     }
-    if ($errors['perm']) {
-       drupal_set_message(format_plural(count($errors['perm']),"Permission %perm not found",
-        "Permissions %perm not found",array('%perm'=>implode(", ",$errors['perm']))),'error');  
-    }
-    drupal_set_message(t("There was error owning some paths, please check that paths and permissions exist for those configured under own that page settings"),'error');
   }
 }

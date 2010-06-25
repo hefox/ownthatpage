@@ -5,7 +5,7 @@
  */
 function ownthatpage_install() {
   // run after most things 
-  db_query("UPDATE {system} set weight=100 where name='ownthatpage'");
+  db_query("UPDATE {system} set weight=10000 where name='ownthatpage'");
 }
 
 /**
